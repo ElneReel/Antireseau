@@ -38,16 +38,16 @@ class MediaController extends Controller
             abort(404, 'Fichier introuvable.');
         }
 
-        $fileContents = Storage::disk($media->disk)->get($media->file_path);
-
-        return response($fileContents, 200, [
+        $headers = [
             'Content-Type' => $media->mime_type,
-            'Content-Disposition' => 'inline; filename="' . $media->original_name . '.webp"',
+            'Content-Disposition' => 'inline; filename="' . addslashes($media->original_name) . '"',
             'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
             'Pragma' => 'no-cache',
             'Expires' => '0',
             'X-Content-Type-Options' => 'nosniff',
-        ]);
+        ];
+
+        return Storage::disk($media->disk)->response($media->file_path, null, $headers);
     }
 
     public function avatar(int $userId)
@@ -72,12 +72,12 @@ class MediaController extends Controller
             abort(404);
         }
 
-        $fileContents = Storage::disk('local')->get($user->profile->avatar_path);
-
-        return response($fileContents, 200, [
+        $headers = [
             'Content-Type' => 'image/webp',
             'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
             'X-Content-Type-Options' => 'nosniff',
-        ]);
+        ];
+
+        return Storage::disk('local')->response($user->profile->avatar_path, null, $headers);
     }
 }

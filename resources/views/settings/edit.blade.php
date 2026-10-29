@@ -1,156 +1,108 @@
 <x-app-layout>
-    <x-slot:title>Réglages du compte - Insociable</x-slot:title>
+    <x-slot:title>Réglages du compte — Insociable</x-slot:title>
 
-    <div class="reading-container" style="max-width: 640px; padding-top: 32px; padding-bottom: 80px;">
-        <h1 class="section-title">Réglages du compte</h1>
+    <div style="flex: 1; overflow-y: auto; padding: 20px 16px 80px;">
+        <h1 style="font-size: 22px; font-weight: 800; margin-bottom: 20px;">Réglages du compte</h1>
 
-        <!-- Section 1 : Profil -->
-        <section class="surface-card" style="margin-bottom: 32px;">
-            <h2 style="font-size: 20px; margin-bottom: 20px;">Mon Profil</h2>
+        <!-- Profil -->
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px;">
+            <h2 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--accent);">Mon Profil</h2>
 
-            <form method="POST" action="{{ route('settings.profile') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('settings.profile') }}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 14px;">
                 @csrf
                 @method('PUT')
 
-                <div class="form-group">
-                    <label class="form-label">Pseudonyme unique</label>
-                    <input type="text" class="form-input" value="@&lrm;{{ $profile->handle }}" disabled style="background-color: rgba(0,0,0,0.04); cursor: not-allowed;">
-                    <div class="form-help">Le pseudonyme est fixe pour garantir la cohérence des échanges.</div>
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Pseudonyme (@handle)</label>
+                    <input type="text" class="creator-input" value="@&lrm;{{ $profile->handle }}" disabled style="opacity: 0.6; cursor: not-allowed;">
                 </div>
 
-                <div class="form-group">
-                    <label for="display_name" class="form-label">Nom d'affichage</label>
-                    <input type="text" id="display_name" name="display_name" class="form-input" value="{{ old('display_name', $profile->display_name) }}" maxlength="60">
-                    @error('display_name')
-                        <div class="form-error">{{ $message }}</div>
-                    @enderror
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Nom d'affichage</label>
+                    <input type="text" name="display_name" class="creator-input" value="{{ old('display_name', $profile->display_name) }}" maxlength="60">
                 </div>
 
-                <div class="form-group">
-                    <label for="bio" class="form-label">Biographie (240 caractères max)</label>
-                    <textarea id="bio" name="bio" class="form-textarea" rows="3" maxlength="{{ config('insociable.bio_max_length', 240) }}">{{ old('bio', $profile->bio) }}</textarea>
-                    <div class="form-help">Une phrase courte sur ce qui t'intéresse.</div>
-                    @error('bio')
-                        <div class="form-error">{{ $message }}</div>
-                    @enderror
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Bio (240 car. max)</label>
+                    <textarea name="bio" class="creator-input" rows="3" maxlength="240">{{ old('bio', $profile->bio) }}</textarea>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Avatar (optionnel)</label>
-                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 10px;">
-                        @if($profile->avatar_path)
-                            <img src="{{ route('media.avatar', $user->id) }}" alt="Avatar actuel" class="author-avatar" style="width: 50px; height: 50px;">
-                            <label class="form-check" style="min-height: auto;">
-                                <input type="checkbox" name="remove_avatar" value="1" style="width: 16px; height: 16px;">
-                                <span style="font-size: 13px; color: var(--danger);">Supprimer l'avatar actuel</span>
-                            </label>
-                        @endif
-                    </div>
-                    <input type="file" name="avatar" class="form-input" accept="image/jpeg,image/png,image/webp">
-                    <div class="form-help">JPEG, PNG ou WebP, max 3 Mo. L'image sera réencodée et les métadonnées supprimées.</div>
-                    @error('avatar')
-                        <div class="form-error">{{ $message }}</div>
-                    @enderror
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Avatar photo</label>
+                    <input type="file" name="avatar" class="creator-input" accept="image/jpeg,image/png,image/webp">
                 </div>
 
-                <div style="margin-top: 24px;">
-                    <button type="submit" class="btn btn-primary">
-                        Mettre à jour le profil
-                    </button>
-                </div>
+                <button type="submit" class="btn-primary-gradient" style="margin-top: 6px;">
+                    Enregistrer le profil
+                </button>
             </form>
-        </section>
+        </div>
 
-        <!-- Section 2 : Mot de passe -->
-        <section class="surface-card" style="margin-bottom: 32px;">
-            <h2 style="font-size: 20px; margin-bottom: 20px;">Sécurité & Mot de passe</h2>
+        <!-- Mot de passe -->
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px;">
+            <h2 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--accent);">Mot de passe</h2>
 
-            <form method="POST" action="{{ route('settings.password') }}">
+            <form method="POST" action="{{ route('settings.password') }}" style="display: flex; flex-direction: column; gap: 12px;">
                 @csrf
                 @method('PUT')
 
-                <div class="form-group">
-                    <label for="current_password" class="form-label">Mot de passe actuel</label>
-                    <input type="password" id="current_password" name="current_password" class="form-input" required autocomplete="current-password">
-                    @error('current_password')
-                        <div class="form-error">{{ $message }}</div>
-                    @enderror
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Mot de passe actuel</label>
+                    <input type="password" name="current_password" required class="creator-input">
                 </div>
 
-                <div class="form-group">
-                    <label for="new_password" class="form-label">Nouveau mot de passe (8 caractères minimum)</label>
-                    <input type="password" id="new_password" name="password" class="form-input" required autocomplete="new-password">
-                    @error('password')
-                        <div class="form-error">{{ $message }}</div>
-                    @enderror
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Nouveau mot de passe</label>
+                    <input type="password" name="password" required class="creator-input" placeholder="8 car. minimum">
                 </div>
 
-                <div class="form-group">
-                    <label for="password_confirmation" class="form-label">Confirmer le nouveau mot de passe</label>
-                    <input type="password" id="password_confirmation" name="password_confirmation" class="form-input" required autocomplete="new-password">
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Confirmation</label>
+                    <input type="password" name="password_confirmation" required class="creator-input">
                 </div>
 
-                <div style="margin-top: 24px;">
-                    <button type="submit" class="btn btn-secondary">
-                        Changer de mot de passe
-                    </button>
-                </div>
+                <button type="submit" class="icon-btn" style="width: 100%; border-radius: var(--radius-full); font-weight: 600; font-size: 13px; height: 42px; border: 1px solid var(--border-subtle); margin-top: 4px;">
+                    Changer le mot de passe
+                </button>
             </form>
-        </section>
+        </div>
 
-        <!-- Section 3 : Comptes bloqués -->
-        <section class="surface-card" style="margin-bottom: 32px;">
-            <h2 style="font-size: 20px; margin-bottom: 12px;">Comptes bloqués ({{ $blockedUsers->count() }})</h2>
-            <p style="font-size: 14px; color: var(--muted); margin-bottom: 20px;">
-                Les comptes ci-dessous n'apparaissent plus dans ton fil et ne peuvent pas interagir avec toi.
-            </p>
-
-            @forelse($blockedUsers as $blocked)
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
-                    <div>
-                        <strong>{{ $blocked->profile->effective_name }}</strong>
-                        <span style="color: var(--muted); font-size: 14px;">@&lrm;{{ $blocked->profile->handle }}</span>
+        <!-- Comptes bloqués -->
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px;">
+            <h2 style="font-size: 16px; font-weight: 700; margin-bottom: 10px;">Comptes bloqués ({{ $blockedUsers->count() }})</h2>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                @forelse($blockedUsers as $blocked)
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle);">
+                        <span style="font-size: 13px; color: white;">@&lrm;{{ $blocked->profile->handle }}</span>
+                        <form method="POST" action="{{ route('blocks.destroy', $blocked->id) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" style="color: var(--accent); font-size: 12px; font-weight: 600; background: none;">Débloquer</button>
+                        </form>
                     </div>
-                    <form method="POST" action="{{ route('blocks.destroy', $blocked->id) }}">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-secondary btn-sm">
-                            Débloquer
-                        </button>
-                    </form>
-                </div>
-            @empty
-                <div style="color: var(--muted); font-size: 14px;">
-                    Tu n'as bloqué aucun compte pour le moment.
-                </div>
-            @endforelse
-        </section>
+                @empty
+                    <div style="font-size: 13px; color: var(--text-muted);">Aucun compte bloqué.</div>
+                @endforelse
+            </div>
+        </div>
 
-        <!-- Section 4 : Suppression de compte -->
-        <section class="surface-card" style="border-color: #f5c6cb; background-color: #fcf8f8;">
-            <h2 style="font-size: 20px; margin-bottom: 12px; color: var(--danger);">Suppression définitive du compte</h2>
-            <p style="font-size: 14px; color: var(--ink); margin-bottom: 20px;">
-                Attention : cette action est immédiate et irréversible. Toutes tes publications, commentaires, sauvegardes et fichiers médias physiques seront définitivement effacés. Toutes tes sessions actives seront révoquées.
+        <!-- Suppression compte -->
+        <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-lg); padding: 20px;">
+            <h2 style="font-size: 16px; font-weight: 700; color: var(--danger); margin-bottom: 6px;">Suppression définitive</h2>
+            <p style="font-size: 12px; color: #fca5a5; line-height: 1.4; margin-bottom: 14px;">
+                Cette action est irréversible. Toutes vos publications, images, vidéos et audios seront définitivement effacés.
             </p>
 
-            <form method="POST" action="{{ route('settings.account.destroy') }}" onsubmit="return confirm('Confirmer la suppression irréversible de ton compte ? Toutes tes données seront immédiatement effacées.');">
+            <form method="POST" action="{{ route('settings.account.destroy') }}" onsubmit="return confirm('Confirmer la suppression irréversible ?');">
                 @csrf
                 @method('DELETE')
-
-                <div class="form-group">
-                    <label for="delete_password" class="form-label">Saisis ton mot de passe actuel pour confirmer :</label>
-                    <input type="password" id="delete_password" name="password" class="form-input" style="max-width: 320px;" required autocomplete="current-password">
-                    @error('password', 'deleteAccount')
-                        <div class="form-error">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div style="margin-top: 20px;">
-                    <button type="submit" class="btn btn-danger">
-                        Supprimer définitivement mon compte et mes données
+                <div style="display: flex; gap: 8px;">
+                    <input type="password" name="password" required placeholder="Votre mot de passe..." class="creator-input" style="font-size: 13px;">
+                    <button type="submit" style="background: var(--danger); color: white; border-radius: var(--radius-full); font-size: 13px; font-weight: 700; padding: 0 16px; white-space: nowrap;">
+                        Supprimer
                     </button>
                 </div>
             </form>
-        </section>
+        </div>
     </div>
 </x-app-layout>

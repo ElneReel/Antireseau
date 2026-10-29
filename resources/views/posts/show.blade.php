@@ -1,137 +1,87 @@
 <x-app-layout>
-    <x-slot:title>Publication de {{ $post->user->profile->effective_name }} - Insociable</x-slot:title>
+    <x-slot:title>Publication de {{ $post->user->profile->effective_name }}</x-slot:title>
 
-    <div class="reading-container" style="padding-top: 24px; padding-bottom: 60px;">
-        <nav style="margin-bottom: 24px;">
-            <a href="{{ route('feed') }}" class="no-underline" style="font-size: 14px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                <span>Retour au fil</span>
+    <div style="flex: 1; overflow-y: auto; padding: 16px 16px 80px;">
+        <nav style="margin-bottom: 16px;">
+            <a href="{{ route('feed') }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <span>Retour au fil plein écran</span>
             </a>
         </nav>
 
-        <!-- Publication détaillée -->
-        <x-post-item :post="$post" :isDetailed="true" />
-
-        <!-- Contrôles spécifiques à l'auteur pour les commentaires -->
-        @can('toggleComments', $post)
-            <div style="margin-top: 16px; padding: 12px 16px; background-color: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 14px; color: var(--muted);">
-                    Statut des commentaires : <strong>{{ $post->comments_allowed ? 'Ouverts' : 'Fermés' }}</strong>
-                </span>
-                <form method="POST" action="{{ route('posts.toggle_comments', $post->id) }}">
-                    @csrf
-                    <button type="submit" class="btn btn-secondary btn-sm">
-                        {{ $post->comments_allowed ? 'Fermer les réponses' : 'Ouvrir les réponses' }}
-                    </button>
-                </form>
+        <!-- Carte post détaillée -->
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 24px;">
+            <div style="padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                <a href="{{ route('profiles.show', $post->user->profile->handle) }}" style="display: flex; align-items: center; gap: 10px;">
+                    <div class="author-chip-avatar">
+                        @if($post->user->profile->avatar_path)
+                            <img src="{{ route('media.avatar', $post->user->id) }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                        @else
+                            {{ mb_strtoupper(mb_substr($post->user->profile->handle, 0, 1)) }}
+                        @endif
+                    </div>
+                    <div>
+                        <div style="font-weight: 700; font-size: 14px; color: white;">{{ $post->user->profile->effective_name }}</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">@&lrm;{{ $post->user->profile->handle }} &bull; {{ $post->created_at->diffForHumans() }}</div>
+                    </div>
+                </a>
             </div>
-        @endcan
+
+            <!-- Média -->
+            @if($post->media && $post->media->isVideo())
+                <video src="{{ route('media.show', $post->media->id) }}" controls autoplay playsinline loop style="width: 100%; max-height: 480px; background: black;"></video>
+            @elseif($post->media && $post->media->isAudio())
+                <div style="padding: 24px; text-align: center; background: #161824;">
+                    <div style="font-size: 40px; margin-bottom: 10px;">🎵</div>
+                    <audio src="{{ route('media.show', $post->media->id) }}" controls style="width: 100%;"></audio>
+                </div>
+            @elseif($post->media && $post->media->isImage())
+                <img src="{{ route('media.show', $post->media->id) }}" style="width: 100%; max-height: 500px; object-fit: contain; background: black;">
+            @endif
+
+            @if($post->body)
+                <div style="padding: 16px; font-size: 15px; line-height: 1.5; color: #f1f5f9; white-space: pre-wrap;">
+                    {!! nl2br(e($post->body)) !!}
+                </div>
+            @endif
+        </div>
 
         <!-- Section Commentaires -->
-        <section style="margin-top: 40px;">
-            <h2 style="font-size: 20px; font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 24px;">
-                Commentaires ({{ $post->comments->count() }})
-            </h2>
+        <h2 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">Commentaires ({{ $post->comments->count() }})</h2>
 
-            <!-- Formulaire de commentaire -->
-            @auth
-                @if($post->comments_allowed)
-                    @if(auth()->user()->isWritingSuspended())
-                        <div class="alert alert-suspension" style="font-size: 14px; padding: 12px 16px; margin-bottom: 24px;">
-                            Ton compte est suspendu d'écriture pour 24 heures. Tu ne peux pas commenter pour le moment.
-                        </div>
-                    @else
-                        <form method="POST" action="{{ route('comments.store', $post->id) }}" class="surface-card" style="margin-bottom: 32px;"
-                              x-data="{ body: '', charLimit: {{ config('insociable.comment_max_length', 1000) }}, key: '{{ Str::random(32) }}' }">
-                            @csrf
-                            <input type="hidden" name="idempotency_key" :value="key">
-
-                            <div class="form-group" style="margin-bottom: 12px;">
-                                <label for="comment-body" class="form-label">Ajouter une réflexion</label>
-                                <textarea id="comment-body"
-                                          name="body"
-                                          class="form-textarea"
-                                          placeholder="Un commentaire sans invective..."
-                                          maxlength="{{ config('insociable.comment_max_length', 1000) }}"
-                                          x-model="body"
-                                          rows="3"
-                                          required></textarea>
-                                @error('body')
-                                    <div class="form-error">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div style="display: flex; align-items: center; justify-content: space-between;">
-                                <span style="font-size: 13px; color: var(--muted);" :style="body.length > charLimit - 50 ? 'color: var(--danger); font-weight: 600;' : ''">
-                                    <span x-text="body.length">0</span> / <span x-text="charLimit">1000</span>
-                                </span>
-                                <button type="submit" class="btn btn-primary btn-sm" :disabled="body.trim() === ''">
-                                    Publier le commentaire
-                                </button>
-                            </div>
-                        </form>
-                    @endif
-                @else
-                    <div style="background-color: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); padding: 16px; text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 32px;">
-                        L’auteur a fermé les commentaires sur cette publication.
-                    </div>
-                @endif
-            @else
-                <div style="background-color: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; margin-bottom: 32px; font-size: 14px;">
-                    <a href="{{ route('login') }}">Connecte-toi</a> pour participer à la conversation.
+        @if($post->comments_allowed)
+            <form method="POST" action="{{ route('comments.store', $post->id) }}" style="margin-bottom: 24px;">
+                @csrf
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" name="body" placeholder="Votre commentaire..." required maxlength="1000" class="creator-input" style="border-radius: var(--radius-full);">
+                    <button type="submit" class="btn-primary-gradient" style="width: auto; padding: 0 20px; border-radius: var(--radius-full);">Envoyer</button>
                 </div>
-            @endauth
+            </form>
+        @else
+            <div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: var(--radius-md); text-align: center; font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+                Les commentaires sont fermés pour ce post.
+            </div>
+        @endif
 
-            <!-- Liste des commentaires (tri chronologique ascendant) -->
-            <div class="comments-list">
-                @forelse($post->comments as $comment)
-                    <article style="padding: 18px 0; border-bottom: 1px solid var(--border); font-size: 15px;" id="commentaire-{{ $comment->id }}">
-                        <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
-                            <div class="author-block">
-                                <a href="{{ route('profiles.show', $comment->user->profile->handle) }}" class="no-underline">
-                                    @if($comment->user->profile->avatar_path)
-                                        <img src="{{ route('media.avatar', $comment->user->id) }}" alt="Avatar" class="author-avatar" style="width: 28px; height: 28px; font-size: 12px;">
-                                    @else
-                                        <div class="author-avatar" style="width: 28px; height: 28px; font-size: 12px;">
-                                            {{ mb_strtoupper(mb_substr($comment->user->profile->handle, 0, 1)) }}
-                                        </div>
-                                    @endif
-                                </a>
-                                <div>
-                                    <a href="{{ route('profiles.show', $comment->user->profile->handle) }}" class="author-name" style="font-size: 14px;">
-                                        {{ $comment->user->profile->effective_name }}
-                                    </a>
-                                    <span class="author-handle" style="font-size: 13px;">@&lrm;{{ $comment->user->profile->handle }}</span>
-                                </div>
-                            </div>
-
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <time datetime="{{ $comment->created_at->toISOString() }}" style="font-size: 12px; color: var(--muted);" title="{{ $comment->created_at->format('d/m/Y à H:i:s') }}">
-                                    {{ $comment->created_at->diffForHumans() }}
-                                </time>
-
-                                @can('delete', $comment)
-                                    <form method="POST" action="{{ route('comments.destroy', $comment->id) }}" style="display: inline;" onsubmit="return confirm('Retirer ce commentaire ?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="post-action-btn" style="color: var(--danger); font-size: 12px; padding: 2px 6px; min-height: 28px;" title="Supprimer le commentaire">
-                                            Retirer
-                                        </button>
-                                    </form>
-                                @endcan
-                            </div>
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+            @forelse($post->comments as $comment)
+                <div style="display: flex; gap: 10px; font-size: 14px;">
+                    <div class="author-chip-avatar" style="width: 28px; height: 28px; font-size: 11px; flex-shrink: 0;">
+                        {{ mb_strtoupper(mb_substr($comment->user->profile->handle, 0, 1)) }}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: baseline; gap: 6px;">
+                            <strong style="color: white; font-size: 13px;">{{ $comment->user->profile->effective_name }}</strong>
+                            <span style="font-size: 11px; color: var(--text-muted);">{{ $comment->created_at->diffForHumans() }}</span>
                         </div>
-
-                        <div style="padding-left: 36px; line-height: 1.55; white-space: pre-wrap; word-break: break-word;">
+                        <div style="color: #cbd5e1; margin-top: 2px;">
                             {!! nl2br(e($comment->body)) !!}
                         </div>
-                    </article>
-                @empty
-                    <div style="padding: 24px 0; color: var(--muted); font-size: 14px;">
-                        Aucun commentaire pour le moment.
                     </div>
-                @endforelse
-            </div>
-        </section>
+                </div>
+            @empty
+                <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px 0;">Aucun commentaire.</div>
+            @endforelse
+        </div>
     </div>
 </x-app-layout>

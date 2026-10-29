@@ -36,10 +36,11 @@ class PostController extends Controller
             }
         }
 
-        // 2. Calcul du condensat d'image si présente
+        // 2. Calcul du condensat de fichier si présent
         $fileHash = null;
-        if ($request->hasFile('image') && $request->file('image')->isValid()) {
-            $fileHash = hash_file('sha256', $request->file('image')->getRealPath());
+        $mediaUpload = $request->file('media_file') ?? $request->file('image');
+        if ($mediaUpload && $mediaUpload->isValid()) {
+            $fileHash = hash_file('sha256', $mediaUpload->getRealPath());
         }
 
         // 3. Validation Antispam atomique
@@ -63,7 +64,7 @@ class PostController extends Controller
         }
 
         // 4. Création transactionnelle du post et du média
-        $post = DB::transaction(function () use ($request, $user, $validation) {
+        $post = DB::transaction(function () use ($request, $user, $validation, $mediaUpload) {
             $post = Post::create([
                 'user_id' => $user->id,
                 'body' => $request->input('body') ?? '',
@@ -72,9 +73,9 @@ class PostController extends Controller
                 'content_hash' => $validation['payload_hash'],
             ]);
 
-            if ($request->hasFile('image')) {
-                $this->mediaService->processPostImage(
-                    $request->file('image'),
+            if ($mediaUpload && $mediaUpload->isValid()) {
+                $this->mediaService->processPostMedia(
+                    $mediaUpload,
                     $user,
                     $request->input('alt_text')
                 )->update(['post_id' => $post->id]);

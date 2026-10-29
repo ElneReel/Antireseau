@@ -19,9 +19,11 @@ class Media extends Model
         'file_path',
         'original_name',
         'mime_type',
+        'media_type',
         'file_size',
         'width',
         'height',
+        'duration_seconds',
         'alt_text',
         'file_hash',
     ];
@@ -34,5 +36,20 @@ class Media extends Model
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);
+    }
+
+    public function isVideo(): bool
+    {
+        return $this->media_type === 'video' || str_starts_with($this->mime_type, 'video/');
+    }
+
+    public function isAudio(): bool
+    {
+        return $this->media_type === 'audio' || str_starts_with($this->mime_type, 'audio/');
+    }
+
+    public function isImage(): bool
+    {
+        return $this->media_type === 'image' || str_starts_with($this->mime_type, 'image/');
     }
 }

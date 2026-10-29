@@ -22,13 +22,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Médias
+    | Médias (Image, Vidéo, Audio)
     |--------------------------------------------------------------------------
     */
     'media' => [
-        'max_file_size_kb' => 3072, // 3 Mo
-        'allowed_mimes' => ['image/jpeg', 'image/png', 'image/webp'],
-        'allowed_extensions' => ['jpg', 'jpeg', 'png', 'webp'],
+        'max_file_size_kb' => 51200, // 50 Mo pour vidéo, géré par type
+        'max_image_size_kb' => 8192,  // 8 Mo
+        'max_video_size_kb' => 51200, // 50 Mo
+        'max_audio_size_kb' => 20480, // 20 Mo
+        'allowed_mimes' => [
+            'image/jpeg', 'image/png', 'image/webp',
+            'video/mp4', 'video/webm',
+            'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg',
+        ],
+        'allowed_extensions' => ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'webm', 'mp3', 'wav', 'ogg'],
         'disk' => 'local',
         'storage_path' => 'private/media',
         'avatar_path' => 'private/avatars',

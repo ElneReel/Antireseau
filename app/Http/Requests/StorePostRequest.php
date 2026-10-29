@@ -15,16 +15,22 @@ class StorePostRequest extends FormRequest
     {
         return [
             'body' => [
-                'required_without:image',
+                'required_without_all:image,media_file',
                 'nullable',
                 'string',
                 'max:' . config('insociable.post_max_length', 2000),
             ],
             'image' => [
                 'nullable',
-                'image',
-                'mimes:jpeg,png,webp,jpg',
-                'max:' . config('insociable.media.max_file_size_kb', 3072),
+                'file',
+                'mimes:jpeg,png,webp,jpg,mp4,webm,mp3,wav,ogg',
+                'max:' . config('insociable.media.max_file_size_kb', 51200),
+            ],
+            'media_file' => [
+                'nullable',
+                'file',
+                'mimes:jpeg,png,webp,jpg,mp4,webm,mp3,wav,ogg',
+                'max:' . config('insociable.media.max_file_size_kb', 51200),
             ],
             'alt_text' => ['nullable', 'string', 'max:255'],
             'comments_allowed' => ['nullable', 'boolean'],
@@ -35,11 +41,12 @@ class StorePostRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'body.required_without' => "La publication doit comporter du texte si aucune image n'est jointe.",
+            'body.required_without_all' => "La publication doit comporter du texte si aucun média n'est joint.",
             'body.max' => "La publication ne peut pas dépasser " . config('insociable.post_max_length', 2000) . " caractères.",
-            'image.image' => "Le fichier doit être une image valide.",
-            'image.mimes' => "Seuls les formats JPEG, PNG et WebP sont autorisés.",
-            'image.max' => "L'image ne peut pas dépasser 3 Mo.",
+            'image.mimes' => "Formats acceptés : Photos (JPEG, PNG, WebP), Vidéos (MP4, WebM) ou Audio (MP3, WAV, OGG).",
+            'image.max' => "Le fichier dépasse la taille maximale autorisée (50 Mo).",
+            'media_file.mimes' => "Formats acceptés : Photos (JPEG, PNG, WebP), Vidéos (MP4, WebM) ou Audio (MP3, WAV, OGG).",
+            'media_file.max' => "Le fichier dépasse la taille maximale autorisée (50 Mo).",
         ];
     }
 }
