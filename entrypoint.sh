@@ -11,10 +11,19 @@ if [ ! -f /var/www/html/.env ]; then
     cp /var/www/html/.env.example /var/www/html/.env
 fi
 
+# Forcer APP_URL et ASSET_URL en HTTPS
+sed -i "s|^APP_URL=.*|APP_URL=https://antireseau.com|g" /var/www/html/.env
+sed -i "s|^APP_ENV=.*|APP_ENV=production|g" /var/www/html/.env
+sed -i "s|^APP_DEBUG=.*|APP_DEBUG=false|g" /var/www/html/.env
+if ! grep -q "^ASSET_URL=" /var/www/html/.env; then
+    echo "ASSET_URL=https://antireseau.com" >> /var/www/html/.env
+else
+    sed -i "s|^ASSET_URL=.*|ASSET_URL=https://antireseau.com|g" /var/www/html/.env
+fi
+
 # 3. Port dynamique Render ($PORT)
 SERVER_PORT=${PORT:-10000}
 echo "Configuration de Nginx pour écouter sur le port ${SERVER_PORT}..."
-# Cible Alpine http.d
 if [ -f /etc/nginx/http.d/default.conf ]; then
     sed -i "s/listen 80;/listen ${SERVER_PORT};/g" /etc/nginx/http.d/default.conf
     sed -i "s/listen \[::\]:80;/listen [::]:${SERVER_PORT};/g" /etc/nginx/http.d/default.conf
@@ -37,11 +46,16 @@ php artisan key:generate --force
 echo "Exécution des migrations Laravel..."
 php artisan migrate --force
 
-# 8. Démarrage de PHP-FPM en arrière-plan
+# 8. Nettoyage du cache pour régénérer avec HTTPS
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+
+# 9. Démarrage de PHP-FPM en arrière-plan
 echo "Lancement de PHP-FPM..."
 php-fpm -D
 
-# 9. Test et démarrage de Nginx au premier plan
+# 10. Test et démarrage de Nginx au premier plan
 echo "Vérification de la configuration Nginx..."
 nginx -t
 

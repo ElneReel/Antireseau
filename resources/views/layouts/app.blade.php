@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
 
     <title>{{ $title ?? 'antireseau — Le réseau sans algorithme' }}</title>
     <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo-ar.svg') }}">
