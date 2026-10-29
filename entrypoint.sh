@@ -1,34 +1,49 @@
 #!/bin/sh
-set -e
 
-# Port dynamique (Render fournit $PORT, par défaut 80 ou 10000)
-SERVER_PORT=${PORT:-80}
-echo "Configuring Nginx on port ${SERVER_PORT}..."
-sed -i "s/listen 80;/listen ${SERVER_PORT};/g" /etc/nginx/conf.d/default.conf
-sed -i "s/listen \[::\]:80;/listen [::]:${SERVER_PORT};/g" /etc/nginx/conf.d/default.conf
+echo "=== Démarrage antireseau sur Render ==="
 
-# Base de données SQLite par défaut si non configurée en MySQL/Postgres
-if [ "$DB_CONNECTION" = "sqlite" ] || [ -z "$DB_CONNECTION" ]; then
-    mkdir -p /var/www/html/database
-    touch /var/www/html/database/database.sqlite
-    chown -R www-data:www-data /var/www/html/database
+# 1. Dossiers requis par Alpine Linux & Nginx
+mkdir -p /run/nginx /var/log/nginx /var/www/html/storage/logs /var/www/html/storage/framework/views /var/www/html/storage/framework/sessions /var/www/html/storage/framework/cache
+
+# 2. Fichier d'environnement .env
+if [ ! -f /var/www/html/.env ]; then
+    echo "Création du fichier .env depuis .env.example..."
+    cp /var/www/html/.env.example /var/www/html/.env
 fi
 
-# Permissions sur storage et bootstrap/cache
-chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+# 3. Port dynamique Render ($PORT)
+SERVER_PORT=${PORT:-10000}
+echo "Configuration de Nginx pour écouter sur le port ${SERVER_PORT}..."
+# Cible Alpine http.d
+if [ -f /etc/nginx/http.d/default.conf ]; then
+    sed -i "s/listen 80;/listen ${SERVER_PORT};/g" /etc/nginx/http.d/default.conf
+    sed -i "s/listen \[::\]:80;/listen [::]:${SERVER_PORT};/g" /etc/nginx/http.d/default.conf
+fi
 
-# Migrations de base de données
-echo "Running migrations..."
-php artisan migrate --force || true
+# 4. Base SQLite
+mkdir -p /var/www/html/database
+touch /var/www/html/database/database.sqlite
+chmod -R 777 /var/www/html/database
 
-# Optimisations du cache Laravel pour la production
-php artisan config:cache || true
-php artisan route:cache || true
-php artisan view:cache || true
+# 5. Permissions
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
+chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache
 
-echo "Starting PHP-FPM..."
+# 6. Clé Laravel obligatoire
+cd /var/www/html
+php artisan key:generate --force
+
+# 7. Migrations de la base de données
+echo "Exécution des migrations Laravel..."
+php artisan migrate --force
+
+# 8. Démarrage de PHP-FPM en arrière-plan
+echo "Lancement de PHP-FPM..."
 php-fpm -D
 
-echo "Starting Nginx on port ${SERVER_PORT}..."
-nginx -g "daemon off;"
+# 9. Test et démarrage de Nginx au premier plan
+echo "Vérification de la configuration Nginx..."
+nginx -t
+
+echo "Lancement de Nginx sur le port ${SERVER_PORT}..."
+exec nginx -g "daemon off;"

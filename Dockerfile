@@ -13,7 +13,7 @@ RUN npm run build
 # ==============================================================================
 FROM php:8.3-fpm-alpine
 
-# Installation de Nginx et des dépendances système
+# Installation de Nginx et des extensions requises pour Laravel
 RUN apk update && apk add --no-cache \
     nginx \
     curl \
@@ -26,32 +26,34 @@ RUN apk update && apk add --no-cache \
     oniguruma-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_sqlite pdo_mysql mbstring zip bcmath exif opcache \
-    && rm -rf /var/cache/apk/*
+    && mkdir -p /run/nginx /var/log/nginx /etc/nginx/http.d \
+    && rm -rf /etc/nginx/http.d/* /etc/nginx/conf.d/* /var/cache/apk/*
 
-# Installation de Composer
+# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Copie du code source
+# Copie du code
 COPY . .
 
 # Copie des assets compilés par Node.js
 COPY --from=node-builder /app/public/build ./public/build
 
-# Installation des dépendances Composer sans dépendances de dev
+# Installation Composer en mode production
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Configuration Nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Nginx vhost sous Alpine http.d
+COPY nginx.conf /etc/nginx/http.d/default.conf
 
-# Script d'entrée
+# Entrypoint
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Permissions initiales
+RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 80 10000
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["/usr/local/bin/entrypoint.sh"]
