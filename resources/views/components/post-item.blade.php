@@ -3,9 +3,65 @@
 <section class="reel-item" id="post-{{ $post->id }}" x-data="{
     commentsOpen: false,
     optionsOpen: false,
+    liked: {{ $post->isLikedBy(auth()->user()) ? 'true' : 'false' }},
+    likesCount: {{ $post->likes_count ?? $post->likes()->count() }},
+    reposted: {{ $post->isRepostedBy(auth()->user()) ? 'true' : 'false' }},
+    repostsCount: {{ $post->reposts_count ?? $post->reposts()->count() }},
+    reposterHandle: '{{ $post->lastRepostedBy?->profile?->handle ?? '' }}',
+    reposterName: '{{ addslashes($post->lastRepostedBy?->profile?->effective_name ?? '') }}',
     bookmarked: {{ $post->isBookmarkedBy(auth()->user()) ? 'true' : 'false' }},
+    showHeartBurst: false,
+    showRepostToast: false,
     isPlaying: true,
     isMuted: true,
+    toggleLike() {
+        this.liked = !this.liked;
+        this.likesCount += this.liked ? 1 : -1;
+        if (this.liked) {
+            this.showHeartBurst = true;
+            setTimeout(() => this.showHeartBurst = false, 800);
+        }
+        fetch('{{ route('posts.like', $post->id) }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        }).then(r => r.json()).then(data => {
+            this.liked = data.liked;
+            this.likesCount = data.likes_count;
+        });
+    },
+    doubleTapLike() {
+        if (!this.liked) {
+            this.toggleLike();
+        } else {
+            this.showHeartBurst = true;
+            setTimeout(() => this.showHeartBurst = false, 800);
+        }
+    },
+    toggleRepost() {
+        this.reposted = !this.reposted;
+        this.repostsCount += this.reposted ? 1 : -1;
+        if (this.reposted) {
+            this.showRepostToast = true;
+            setTimeout(() => this.showRepostToast = false, 2800);
+        }
+        fetch('{{ route('posts.repost', $post->id) }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        }).then(r => r.json()).then(data => {
+            this.reposted = data.reposted;
+            this.repostsCount = data.reposts_count;
+            if (data.reposter_handle) {
+                this.reposterHandle = data.reposter_handle;
+                this.reposterName = data.reposter_name;
+            }
+        });
+    },
     toggleBookmark() {
         this.bookmarked = !this.bookmarked;
         fetch('{{ route('bookmarks.toggle', $post->id) }}', {
@@ -35,8 +91,30 @@
         }
     }
 }">
-    <!-- Média principal -->
-    <div class="media-display-wrapper">
+    <!-- Bandeau supérieur "Remonté dans le fil par..." (quand repartagé) -->
+    <div x-show="reposterHandle !== ''" x-cloak
+         style="position: absolute; top: 14px; left: 16px; z-index: 25; display: inline-flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.16); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(16, 185, 129, 0.4); padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #34d399; box-shadow: 0 4px 15px rgba(0,0,0,0.4);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+        <span>Remonté par</span>
+        <a :href="'/membres/' + reposterHandle" style="color: #ffffff; text-decoration: underline;" x-text="'@' + reposterHandle"></a>
+    </div>
+
+    <!-- Notification Toast quand on repartage / fait remonter -->
+    <div x-show="showRepostToast" x-transition.opacity x-cloak
+         style="position: absolute; top: 56px; left: 50%; transform: translateX(-50%); z-index: 45; background: #10b981; color: #052e16; font-weight: 800; font-size: 12px; padding: 8px 16px; border-radius: 999px; box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5); white-space: nowrap; display: flex; align-items: center; gap: 6px;">
+        <span>⚡ Propulsé en haut du fil commun !</span>
+    </div>
+
+    <!-- Animation Grand Cœur au Double-Tap / Like -->
+    <div x-show="showHeartBurst" x-transition.scale.origin.center x-cloak
+         style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 35; pointer-events: none;">
+        <svg width="96" height="96" viewBox="0 0 24 24" fill="#ff0055" stroke="#ffffff" stroke-width="1" style="filter: drop-shadow(0 0 30px rgba(255, 0, 85, 0.8));">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+        </svg>
+    </div>
+
+    <!-- Média principal (Double-clic ou Double-tap = Like) -->
+    <div class="media-display-wrapper" @dblclick="doubleTapLike()">
         @if($post->media && $post->media->isVideo())
             <!-- Format Vidéo Plein Format (Reels / TikTok) -->
             <div class="video-wrapper">
@@ -67,11 +145,11 @@
             <!-- Format Audio Immersif avec Vinyle et Visualiseur -->
             <div class="audio-card-wrapper">
                 <div class="audio-vinyl" :class="{ 'paused': !isPlaying }">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ff0055" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
                 </div>
                 
                 <h3 style="font-size: 18px; margin-bottom: 6px; font-weight: 700;">{{ $post->media->original_name }}</h3>
-                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 18px;">Piste audio &bull; Insociable Sound</p>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 18px;">Piste audio &bull; antireseau Sound</p>
 
                 <audio x-ref="audioPlayer" src="{{ route('media.show', $post->media->id) }}" @ended="isPlaying = false"></audio>
 
@@ -113,9 +191,12 @@
                     {{ mb_strtoupper(mb_substr($post->user->profile->handle, 0, 1)) }}
                 @endif
             </a>
-            <a href="{{ route('profiles.show', $post->user->profile->handle) }}" class="author-chip-name">
-                {{ $post->user->profile->effective_name }}
-            </a>
+            <div style="display: flex; flex-direction: column;">
+                <a href="{{ route('profiles.show', $post->user->profile->handle) }}" class="author-chip-name" style="line-height: 1.1;">
+                    {{ $post->user->profile->effective_name }}
+                </a>
+                <span style="font-size: 11px; color: rgba(255,255,255,0.65);">@&lrm;{{ $post->user->profile->handle }} &bull; 0 abonné</span>
+            </div>
         </div>
 
         @if($post->media && $post->body)
@@ -141,20 +222,33 @@
         </div>
     </div>
 
-    <!-- Dock d'actions latéral droit (Instagram Reels / TikTok Style) -->
+    <!-- Dock d'actions latéral droit (Like, Repartager/Remonter, Commenter, Sauver) -->
     <div class="reel-actions-dock">
-        <!-- Sauvegarde -->
-        <button type="button" class="reel-action-btn" @click="toggleBookmark()">
-            <div class="reel-action-circle" :class="{ 'active': bookmarked }">
-                <svg width="22" height="22" viewBox="0 0 24 24" :fill="bookmarked ? '#ffffff' : 'none'" stroke="currentColor" stroke-width="2">
-                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+        <!-- 1. LIKE (Cœur) -->
+        <button type="button" class="reel-action-btn" @click="toggleLike()" title="Aimer cette publication">
+            <div class="reel-action-circle" :style="liked ? 'background: rgba(255, 0, 85, 0.2); border-color: #ff0055; color: #ff0055;' : ''">
+                <svg width="22" height="22" viewBox="0 0 24 24" :fill="liked ? '#ff0055' : 'none'" :stroke="liked ? '#ff0055' : 'currentColor'" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                 </svg>
             </div>
-            <span class="reel-action-label" x-text="bookmarked ? 'Gardé' : 'Sauver'">Sauver</span>
+            <span class="reel-action-label" x-text="likesCount"></span>
         </button>
 
-        <!-- Commentaires (Ouvre la Bottom Sheet) -->
-        <button type="button" class="reel-action-btn" @click="commentsOpen = true">
+        <!-- 2. REPARTAGER / FAIRE REMONTER EN TÊTE DU FIL -->
+        <button type="button" class="reel-action-btn" @click="toggleRepost()" title="Repartager pour faire remonter ce post en haut du fil">
+            <div class="reel-action-circle" :style="reposted ? 'background: rgba(16, 185, 129, 0.22); border-color: #10b981; color: #10b981; box-shadow: 0 0 15px rgba(16,185,129,0.4);' : ''">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" :stroke="reposted ? '#10b981' : 'currentColor'" stroke-width="2.2">
+                    <polyline points="17 1 21 5 17 9"></polyline>
+                    <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                    <polyline points="7 23 3 19 7 15"></polyline>
+                    <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                </svg>
+            </div>
+            <span class="reel-action-label" :style="reposted ? 'color: #34d399; font-weight: 800;' : ''" x-text="repostsCount > 0 ? repostsCount : 'Remonter'"></span>
+        </button>
+
+        <!-- 3. COMMENTAIRES (Ouvre la Bottom Sheet) -->
+        <button type="button" class="reel-action-btn" @click="commentsOpen = true" title="Lire et écrire des commentaires">
             <div class="reel-action-circle">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
@@ -163,11 +257,21 @@
             <span class="reel-action-label">{{ $post->comments_count ?? $post->comments->count() }}</span>
         </button>
 
-        <!-- Menu Options (...) -->
+        <!-- 4. SAUVEGARDE PRIVÉE -->
+        <button type="button" class="reel-action-btn" @click="toggleBookmark()" title="Garder dans mes favoris privés">
+            <div class="reel-action-circle" :class="{ 'active': bookmarked }">
+                <svg width="20" height="20" viewBox="0 0 24 24" :fill="bookmarked ? '#ffffff' : 'none'" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                </svg>
+            </div>
+            <span class="reel-action-label" x-text="bookmarked ? 'Gardé' : 'Sauver'">Sauver</span>
+        </button>
+
+        <!-- 5. MENU OPTIONS (...) -->
         <div style="position: relative;">
             <button type="button" class="reel-action-btn" @click="optionsOpen = !optionsOpen">
-                <div class="reel-action-circle">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <div class="reel-action-circle" style="width: 38px; height: 38px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="1"></circle>
                         <circle cx="12" cy="5" r="1"></circle>
                         <circle cx="12" cy="19" r="1"></circle>
@@ -213,7 +317,7 @@
         </div>
     </div>
 
-    <!-- Bottom Sheet Coulissante des Commentaires (Style Instagram) -->
+    <!-- Bottom Sheet Coulissante des Commentaires -->
     <div class="bottom-sheet" x-show="commentsOpen" x-cloak @click.self="commentsOpen = false">
         <div class="sheet-panel">
             <div class="sheet-header">
@@ -225,12 +329,12 @@
             <div class="sheet-body">
                 @forelse($post->comments as $comment)
                     <div style="display: flex; gap: 12px; margin-bottom: 16px; font-size: 14px;">
-                        <div class="author-chip-avatar" style="width: 28px; height: 28px; font-size: 11px; flex-shrink: 0;">
+                        <a href="{{ route('profiles.show', $comment->user->profile->handle) }}" class="author-chip-avatar" style="width: 28px; height: 28px; font-size: 11px; flex-shrink: 0;">
                             {{ mb_strtoupper(mb_substr($comment->user->profile->handle, 0, 1)) }}
-                        </div>
+                        </a>
                         <div style="flex: 1;">
                             <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 2px;">
-                                <strong style="font-size: 13px; color: #ffffff;">{{ $comment->user->profile->effective_name }}</strong>
+                                <a href="{{ route('profiles.show', $comment->user->profile->handle) }}" style="font-weight: 700; font-size: 13px; color: #ffffff;">{{ $comment->user->profile->effective_name }}</a>
                                 <span style="font-size: 11px; color: var(--text-muted);">{{ $comment->created_at->diffForHumans() }}</span>
                             </div>
                             <div style="color: #cbd5e1; line-height: 1.4; word-break: break-word;">
@@ -251,13 +355,13 @@
                         @csrf
                         <input type="text"
                                name="body"
-                               placeholder="Ajouter une réflexion..."
+                               placeholder="Ajouter un commentaire..."
                                required
                                maxlength="1000"
                                class="creator-input"
                                style="padding: 10px 14px; font-size: 14px; border-radius: var(--radius-full); background: #0c0e14;">
                         <button type="submit" class="btn-primary-gradient" style="width: auto; padding: 0 18px; border-radius: var(--radius-full);">
-                            Publier
+                            Envoyer
                         </button>
                     </form>
                 </div>

@@ -1,11 +1,12 @@
 <x-app-layout>
-    <x-slot:title>Connexion — Insociable</x-slot:title>
+    <x-slot:title>Connexion — antireseau</x-slot:title>
 
     <div style="flex: 1; overflow-y: auto; padding: 40px 20px; display: flex; flex-direction: column; justify-content: center;">
         <div style="max-width: 380px; width: 100%; margin: 0 auto;">
             <div style="text-align: center; margin-bottom: 32px;">
+                <img src="{{ asset('images/logo-ar.svg') }}" alt="antireseau" width="60" height="60" style="margin-bottom: 16px; filter: drop-shadow(0 0 16px rgba(244, 63, 94, 0.4));">
                 <h1 style="font-size: 28px; font-weight: 800; margin-bottom: 8px;">Bon retour</h1>
-                <p style="color: var(--text-muted); font-size: 14px;">Accédez au fil chronologique en temps réel</p>
+                <p style="color: var(--text-muted); font-size: 14px;">Accédez à <strong style="color: white;">antireseau</strong> en temps réel</p>
             </div>
 
             <form method="POST" action="{{ route('login') }}" style="display: flex; flex-direction: column; gap: 16px;">

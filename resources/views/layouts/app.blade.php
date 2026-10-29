@@ -8,7 +8,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $title ?? 'Insociable' }}</title>
+    <title>{{ $title ?? 'antireseau — Le réseau sans algorithme' }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo-ar.svg') }}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,9 +21,14 @@
     <div class="app-viewport">
         <!-- Barre haute (Top Bar) -->
         <header class="top-bar">
-            <a href="{{ auth()->check() ? route('feed') : route('home') }}" class="brand-title">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="url(#logo-grad)" stroke-width="2.5"><defs><linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#f43f5e"/><stop offset="50%" stop-color="#a855f7"/><stop offset="100%" stop-color="#6366f1"/></linearGradient></defs><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path></svg>
-                <span>Insociable</span>
+            <a href="{{ auth()->check() ? route('feed') : route('home') }}" class="brand-title" title="antireseau.com">
+                <div class="logo-ar-badge">
+                    <img src="{{ asset('images/logo-ar.svg') }}" alt="AR" width="36" height="36" class="logo-ar-img">
+                </div>
+                <div class="brand-text-wrap">
+                    <span class="brand-anti">anti</span><span class="brand-reseau">reseau</span><span class="brand-dot">.</span>
+                    <span class="brand-live-badge">AR</span>
+                </div>
             </a>
 
             <div class="top-bar-actions">

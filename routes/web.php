@@ -55,6 +55,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/publications/{id}', [PostController::class, 'update'])->name('posts.update');
     Route::delete('/publications/{id}', [PostController::class, 'destroy'])->name('posts.destroy');
     Route::post('/publications/{id}/commentaires/bascule', [PostController::class, 'toggleComments'])->name('posts.toggle_comments');
+    Route::post('/publications/{id}/like', [PostController::class, 'toggleLike'])->name('posts.like');
+    Route::post('/publications/{id}/repartage', [PostController::class, 'toggleRepost'])->name('posts.repost');
 
     // Commentaires
     Route::post('/publications/{id}/commentaires', [CommentController::class, 'store'])->name('comments.store');

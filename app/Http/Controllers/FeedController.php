@@ -13,41 +13,40 @@ class FeedController extends Controller
     {
         $user = Auth::user();
         $perPage = config('insociable.posts_per_page', 20);
+        $mode = $request->query('mode', 'bumped');
 
-        // Curseur de pagination stable :
-        // 'before' permet d'aller vers le passé (posts plus anciens)
-        // 'after' permet de chercher s'il y a des posts plus récents
         $beforeCreatedAt = $request->query('before_created_at');
         $beforeId = $request->query('before_id');
         $afterCreatedAt = $request->query('after_created_at');
         $afterId = $request->query('after_id');
 
         $query = Post::query()
-            ->with(['user.profile', 'media'])
-            ->withCount('comments')
-            ->feedFor($user);
+            ->with(['user.profile', 'lastRepostedBy.profile', 'media', 'comments.user.profile'])
+            ->withCount(['comments', 'likes', 'reposts'])
+            ->feedFor($user, $mode);
+
+        $timeCol = $mode === 'chrono' ? 'created_at' : 'bumped_at';
 
         if ($beforeCreatedAt && $beforeId) {
             $parsedBefore = Carbon::parse($beforeCreatedAt)->format('Y-m-d H:i:s');
-            $query->where(function ($q) use ($parsedBefore, $beforeId) {
-                $q->where('created_at', '<', $parsedBefore)
-                  ->orWhere(function ($sub) use ($parsedBefore, $beforeId) {
-                      $sub->where('created_at', '=', $parsedBefore)
+            $query->where(function ($q) use ($parsedBefore, $beforeId, $timeCol) {
+                $q->where($timeCol, '<', $parsedBefore)
+                  ->orWhere(function ($sub) use ($parsedBefore, $beforeId, $timeCol) {
+                      $sub->where($timeCol, '=', $parsedBefore)
                           ->where('id', '<', $beforeId);
                   });
             });
         } elseif ($afterCreatedAt && $afterId) {
             $parsedAfter = Carbon::parse($afterCreatedAt)->format('Y-m-d H:i:s');
-            $query->where(function ($q) use ($parsedAfter, $afterId) {
-                $q->where('created_at', '>', $parsedAfter)
-                  ->orWhere(function ($sub) use ($parsedAfter, $afterId) {
-                      $sub->where('created_at', '=', $parsedAfter)
+            $query->where(function ($q) use ($parsedAfter, $afterId, $timeCol) {
+                $q->where($timeCol, '>', $parsedAfter)
+                  ->orWhere(function ($sub) use ($parsedAfter, $afterId, $timeCol) {
+                      $sub->where($timeCol, '=', $parsedAfter)
                           ->where('id', '>', $afterId);
                   });
             });
         }
 
-        // On prend $perPage + 1 pour déterminer avec certitude s'il reste une page suivante
         $posts = $query->take($perPage + 1)->get();
 
         $hasMore = $posts->count() > $perPage;
@@ -59,16 +58,15 @@ class FeedController extends Controller
         $firstPost = $posts->first();
 
         $nextCursor = ($hasMore && $lastPost) ? [
-            'before_created_at' => $lastPost->created_at->format('Y-m-d H:i:s'),
+            'before_created_at' => ($lastPost->bumped_at ?? $lastPost->created_at)->format('Y-m-d H:i:s'),
             'before_id' => $lastPost->id,
         ] : null;
 
         $newestCursor = $firstPost ? [
-            'after_created_at' => $firstPost->created_at->format('Y-m-d H:i:s'),
+            'after_created_at' => ($firstPost->bumped_at ?? $firstPost->created_at)->format('Y-m-d H:i:s'),
             'after_id' => $firstPost->id,
         ] : null;
 
-        // Informations de suspension éventuelle
         $isSuspended = $user ? $user->isWritingSuspended() : false;
         $suspendedUntil = ($user && $user->write_suspended_until)
             ? $user->write_suspended_until->timezone(config('app.timezone', 'UTC'))->format('d/m/Y à H:i')
@@ -85,6 +83,7 @@ class FeedController extends Controller
 
         return view('feed.index', [
             'posts' => $posts,
+            'mode' => $mode,
             'hasMore' => $hasMore,
             'nextCursor' => $nextCursor,
             'newestCursor' => $newestCursor,

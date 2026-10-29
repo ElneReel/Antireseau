@@ -60,6 +60,28 @@ class User extends Authenticatable
         return $this->hasMany(Bookmark::class);
     }
 
+    public function likes(): HasMany
+    {
+        return $this->hasMany(PostLike::class);
+    }
+
+    public function reposts(): HasMany
+    {
+        return $this->hasMany(PostRepost::class);
+    }
+
+    public function likedPosts(): BelongsToMany
+    {
+        return $this->belongsToMany(Post::class, 'post_likes', 'user_id', 'post_id')
+            ->withTimestamps();
+    }
+
+    public function repostedPosts(): BelongsToMany
+    {
+        return $this->belongsToMany(Post::class, 'post_reposts', 'user_id', 'post_id')
+            ->withTimestamps();
+    }
+
     public function blockedUsers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'blocks', 'blocker_id', 'blocked_id')

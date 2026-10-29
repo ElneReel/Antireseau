@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePostRequest;
 use App\Http\Requests\UpdatePostRequest;
 use App\Models\Post;
+use App\Models\PostLike;
+use App\Models\PostRepost;
 use App\Services\AntispamService;
 use App\Services\MediaService;
 use Carbon\Carbon;
@@ -114,7 +116,8 @@ class PostController extends Controller
 
     public function show(int $id)
     {
-        $post = Post::with(['user.profile', 'media', 'comments.user.profile'])
+        $post = Post::with(['user.profile', 'lastRepostedBy.profile', 'media', 'comments.user.profile'])
+            ->withCount(['comments', 'likes', 'reposts'])
             ->findOrFail($id);
 
         Gate::authorize('view', $post);
@@ -179,5 +182,93 @@ class PostController extends Controller
             : 'Les commentaires sont maintenant fermés pour cette publication.';
 
         return redirect()->back()->with('info', $message);
+    }
+
+    /**
+     * Bascule le Like sur une publication.
+     */
+    public function toggleLike(Request $request, int $id)
+    {
+        $user = Auth::user();
+        $post = Post::published()->findOrFail($id);
+
+        $existing = PostLike::where('user_id', $user->id)
+            ->where('post_id', $post->id)
+            ->first();
+
+        if ($existing) {
+            $existing->delete();
+            $liked = false;
+        } else {
+            PostLike::create([
+                'user_id' => $user->id,
+                'post_id' => $post->id,
+            ]);
+            $liked = true;
+        }
+
+        $likesCount = PostLike::where('post_id', $post->id)->count();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'liked' => $liked,
+                'likes_count' => $likesCount,
+            ]);
+        }
+
+        return redirect()->back();
+    }
+
+    /**
+     * Bascule le Repartage (Écho / Propulsion) qui fait remonter la publication en haut du fil !
+     */
+    public function toggleRepost(Request $request, int $id)
+    {
+        $user = Auth::user();
+        $post = Post::published()->findOrFail($id);
+
+        $existing = PostRepost::where('user_id', $user->id)
+            ->where('post_id', $post->id)
+            ->first();
+
+        if ($existing) {
+            $existing->delete();
+            $reposted = false;
+
+            // Recalcul du dernier repartageur pour bumped_at
+            $latestRepost = PostRepost::where('post_id', $post->id)
+                ->latest('created_at')
+                ->first();
+
+            $post->update([
+                'bumped_at' => $latestRepost ? $latestRepost->created_at : $post->created_at,
+                'last_reposted_by_id' => $latestRepost ? $latestRepost->user_id : null,
+            ]);
+        } else {
+            PostRepost::create([
+                'user_id' => $user->id,
+                'post_id' => $post->id,
+            ]);
+            $reposted = true;
+
+            // Fait REMONTER la publication tout en haut du fil !
+            $post->update([
+                'bumped_at' => Carbon::now(),
+                'last_reposted_by_id' => $user->id,
+            ]);
+        }
+
+        $repostsCount = PostRepost::where('post_id', $post->id)->count();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'reposted' => $reposted,
+                'reposts_count' => $repostsCount,
+                'reposter_handle' => $reposted ? $user->profile->handle : null,
+                'reposter_name' => $reposted ? $user->profile->effective_name : null,
+            ]);
+        }
+
+        return redirect()->back()->with('success', $reposted ? 'Publication remontée en tête du fil !' : 'Repartage annulé.');
     }
 }

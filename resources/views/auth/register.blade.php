@@ -1,11 +1,12 @@
 <x-app-layout>
-    <x-slot:title>Rejoindre — Insociable</x-slot:title>
+    <x-slot:title>Rejoindre — antireseau</x-slot:title>
 
     <div style="flex: 1; overflow-y: auto; padding: 32px 20px 50px;">
         <div style="max-width: 380px; width: 100%; margin: 0 auto;">
-            <div style="text-align: center; margin-bottom: 28px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <img src="{{ asset('images/logo-ar.svg') }}" alt="antireseau" width="58" height="58" style="margin-bottom: 14px; filter: drop-shadow(0 0 16px rgba(244, 63, 94, 0.4));">
                 <h1 style="font-size: 26px; font-weight: 800; margin-bottom: 6px;">Créer un profil</h1>
-                <p style="color: var(--text-muted); font-size: 13px;">Rejoignez le fil sans abonnement ni algorithme</p>
+                <p style="color: var(--text-muted); font-size: 13px;">Rejoignez <strong style="color: white;">antireseau</strong> &bull; 0 abonnement &bull; 0 algo</p>
             </div>
 
             <form method="POST" action="{{ route('register') }}" style="display: flex; flex-direction: column; gap: 14px;">

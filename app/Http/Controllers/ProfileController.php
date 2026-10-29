@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Profile;
-use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ProfileController extends Controller
@@ -28,18 +26,37 @@ class ProfileController extends Controller
             abort(404, 'Ce profil est inaccessible.');
         }
 
+        // 1. Ses créations (Publications)
         $posts = $targetUser->posts()
-            ->with(['media'])
-            ->withCount('comments')
+            ->with(['media', 'user.profile'])
+            ->withCount(['comments', 'likes', 'reposts'])
             ->published()
             ->orderBy('created_at', 'desc')
             ->orderBy('id', 'desc')
-            ->paginate(config('insociable.posts_per_page', 20));
+            ->get();
+
+        // 2. Ses repartages (Ce qu'il a fait remonter dans le fil)
+        $repostedPosts = $targetUser->repostedPosts()
+            ->with(['media', 'user.profile'])
+            ->withCount(['comments', 'likes', 'reposts'])
+            ->where('status', 'published')
+            ->orderByPivot('created_at', 'desc')
+            ->get();
+
+        // 3. Ses likes (Ce qu'il a aimé)
+        $likedPosts = $targetUser->likedPosts()
+            ->with(['media', 'user.profile'])
+            ->withCount(['comments', 'likes', 'reposts'])
+            ->where('status', 'published')
+            ->orderByPivot('created_at', 'desc')
+            ->get();
 
         return view('profiles.show', [
             'profile' => $profile,
             'targetUser' => $targetUser,
             'posts' => $posts,
+            'repostedPosts' => $repostedPosts,
+            'likedPosts' => $likedPosts,
             'isBlockedByViewer' => $isBlockedByViewer,
             'isSelf' => $viewer->id === $targetUser->id,
         ]);

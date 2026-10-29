@@ -41,9 +41,7 @@ class MediaController extends Controller
         $headers = [
             'Content-Type' => $media->mime_type,
             'Content-Disposition' => 'inline; filename="' . addslashes($media->original_name) . '"',
-            'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
-            'Pragma' => 'no-cache',
-            'Expires' => '0',
+            'Cache-Control' => 'private, max-age=86400',
             'X-Content-Type-Options' => 'nosniff',
         ];
 
@@ -74,7 +72,7 @@ class MediaController extends Controller
 
         $headers = [
             'Content-Type' => 'image/webp',
-            'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
+            'Cache-Control' => 'private, max-age=86400',
             'X-Content-Type-Options' => 'nosniff',
         ];
 

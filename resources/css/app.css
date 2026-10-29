@@ -115,15 +115,75 @@ button {
 }
 
 .brand-title {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  background: var(--accent-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.logo-ar-badge {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.logo-ar-badge:hover {
+  transform: scale(1.05);
+}
+
+.logo-ar-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+}
+
+.brand-text-wrap {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.brand-anti {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.03em;
+}
+
+.brand-reseau {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.03em;
+}
+
+.brand-dot {
+  color: #ff0055;
+  font-weight: 900;
+  font-size: 22px;
+  margin-left: -4px;
+}
+
+.brand-live-badge {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: #ff0055;
+  padding: 3px 6px;
+  border-radius: 6px;
+  line-height: 1;
+  box-shadow: 0 0 12px rgba(255, 0, 85, 0.4);
+  margin-left: 2px;
 }
 
 .top-bar-actions {
