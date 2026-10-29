@@ -13,11 +13,13 @@ RUN npm run build
 # ==============================================================================
 FROM php:8.3-fpm-alpine
 
-# Installation de Nginx et des extensions requises pour Laravel
+# Installation de Nginx, unzip et des extensions requises pour Laravel
 RUN apk update && apk add --no-cache \
     nginx \
     curl \
     git \
+    unzip \
+    zip \
     libpng-dev \
     libjpeg-turbo-dev \
     freetype-dev \
@@ -34,14 +36,15 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Copie du code
+# Copie du code source
 COPY . .
 
 # Copie des assets compilés par Node.js
 COPY --from=node-builder /app/public/build ./public/build
 
-# Installation Composer en mode production
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Installation Composer rapide avec unzip et timeout augmenté
+RUN composer config -g process-timeout 600 \
+    && composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
 # Nginx vhost sous Alpine http.d
 COPY nginx.conf /etc/nginx/http.d/default.conf
